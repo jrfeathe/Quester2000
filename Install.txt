@@ -1,0 +1,65 @@
+# Installation tutorial for Debian based Linux (Tested on Linux Mint 22.1)
+
+sudo apt update
+sudo apt upgrade
+sudo reboot
+
+sudo apt install build-essential curl git postgresql
+sudo systemctl enable --now postgresql
+
+git clone https://github.com/jrfeathe/Quester2000
+
+# Install nvm 
+# (Follow updated instructions: https://github.com/nvm-sh/nvm?tab=readme-ov-file#install--update-script )
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# Install the latest LTS release of Node.js (and npm)
+nvm install --lts
+nvm use --lts
+nvm alias default 'lts/*'
+
+# Verify
+node -v
+npm -v
+
+cd Quester2000
+npm install
+npm install --save-dev prisma
+npm install @prisma/client
+
+npm run dev
+Ctrl+C
+
+npx prisma init
+
+sudo -u postgres psql
+        -- 1) Create a dedicated login role
+CREATE ROLE quester2000_u WITH LOGIN PASSWORD 'strongpassword';
+        -- 2) Allow it to create databases (so Prisma’s shadow DB works)
+ALTER ROLE quester2000_u CREATEDB;
+        -- 3) Create the application database owned by that role
+CREATE DATABASE quester2000_db OWNER quester2000_u;
+exit
+
+# In .env
+DATABASE_URL="postgresql://quester2000_u:strongpassword@localhost:5432/quester2000_db?schema=public"
+
+#Install dBeaver for GUI view of databases
+https://dbeaver.io/download/
++ New database connection
+PostgreSQL
+Connect by: Host
+Host: localhost
+Database: quester2000_db
+Username: quester2000_u
+Password: strongpassword
+Download driver files
+
+npx prisma migrate dev --name init
+npx prisma generate
+npm run dev
+
+# Optional: npx prisma studio
