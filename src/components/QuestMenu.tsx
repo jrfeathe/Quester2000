@@ -1,5 +1,5 @@
 import React from 'react';
-import QuestListItem from '../components/QuestListItem';
+import QuestListItem from './QuestListItem.js';
 
 const quests = [
     { id: 1, Component: QuestListItem },
