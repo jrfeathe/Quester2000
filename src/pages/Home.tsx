@@ -1,5 +1,3 @@
-import React from 'react';
-
 const Home = () => (
     <div>
         Test22587
@@ -7,4 +5,3 @@ const Home = () => (
 );
 
 export default Home;
-
