@@ -2,8 +2,8 @@
 
 # Quester2000
 
+Manage your to-do list better by tracking points to be redeemed for customizable rewards, promoting self rewarding while managing a healthy work-life balance.
 A modern web application built with **React + TypeScript + Vite**, using a **PostgreSQL** database powered by **Prisma ORM**.
-A web app for managing your to-do list that tracks points to be redeemed for customizable rewards. Tool for managing work-life balance.
 
 ---
 
@@ -26,11 +26,12 @@ A web app for managing your to-do list that tracks points to be redeemed for cus
 ### 1. System Setup
 
 ```bash
-sudo apt update && sudo apt upgrade -y
+sudo apt update
+sudo apt upgrade
 sudo reboot
 
 # Install essentials
-sudo apt install -y build-essential curl git postgresql
+sudo apt install build-essential curl git postgresql
 sudo systemctl enable --now postgresql
 ```
 
@@ -44,7 +45,8 @@ cd Quester2000
 ### 3. Install Node.js & npm (via nvm)
 
 ```bash
-# Install nvm (see: https://github.com/nvm-sh/nvm)
+# Install nvm
+# ( Follow updated instructions: https://github.com/nvm-sh/nvm?tab=readme-ov-file#install--update-script )
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
 
 export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
@@ -68,7 +70,15 @@ npm install --save-dev prisma
 npm install @prisma/client
 ```
 
-### 5. Configure PostgreSQL
+### 5. Run Development Server
+
+```bash
+npm run dev
+```
+
+Stop with `Ctrl+C`.
+
+### 6. Configure PostgreSQL
 
 Open Postgres shell:
 
@@ -85,16 +95,16 @@ CREATE ROLE quester2000_u WITH LOGIN PASSWORD 'strongpassword';
 ALTER ROLE quester2000_u CREATEDB;
 -- Create app database
 CREATE DATABASE quester2000_db OWNER quester2000_u;
-\q
+exit
 ```
 
-Create `.env` file:
+Inside the `.env` file update:
 
 ```bash
 DATABASE_URL="postgresql://quester2000_u:strongpassword@localhost:5432/quester2000_db?schema=public"
 ```
 
-### 6. Initialize Prisma
+### 7. Initialize Prisma
 
 ```bash
 npx prisma init
@@ -102,7 +112,7 @@ npx prisma migrate dev --name init
 npx prisma generate
 ```
 
-### 7. Run Development Server
+### 8. Run Development Server
 
 ```bash
 npm run dev
@@ -116,10 +126,18 @@ Stop with `Ctrl+C`.
 
 * **dBeaver**: GUI for database connections → [Download here](https://dbeaver.io/download/)
 
+> Select [ + New database connection ]
+
+> PostgreSQL
+
+> Connect by: Host
+
   * Host: `localhost`
   * Database: `quester2000_db`
-  * User: `quester2000_u`
+  * Username: `quester2000_u`
   * Password: `strongpassword`
+    
+> Download driver files
 
 * **Prisma Studio**:
 
