@@ -7,20 +7,6 @@ A modern web application built with **React + TypeScript + Vite**, using a **Pos
 
 ---
 
-## 🚀 Tech Stack
-
-* **Frontend**: [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/)
-* **Backend**: [Node.js](https://nodejs.org/) (npm)
-* **Database**: [PostgreSQL](https://www.postgresql.org/)
-* **ORM**: [Prisma](https://www.prisma.io/)
-* **Linting & Formatting**: ESLint, TypeScript ESLint, Prettier
-* **Optional Tools**:
-
-  * [dBeaver](https://dbeaver.io/) – GUI database management
-  * [Prisma Studio](https://www.prisma.io/studio) – Visual data editor
-
----
-
 ## 🛠️ Installation (Debian-based Linux)
 
 ### 1. System Setup
@@ -65,9 +51,20 @@ npm -v
 ### 4. Install Dependencies
 
 ```bash
-npm install
-npm install --save-dev prisma
-npm install @prisma/client
+npm install react react-dom react-router-dom @tanstack/react-query bootstrap @popperjs/core react-hook-form zod @hookform/resolvers
+
+# Dev dependencies (frontend tooling & testing)
+npm install -D vite @vitejs/plugin-react typescript @types/react @types/react-dom vitest
+
+# Backend dependencies
+npm install express express-session connect-pg-simple passport passport-local argon2 cors helmet dotenv @prisma/client pg
+
+# Backend dev dependencies
+npm install -D prisma typescript @types/node @types/express @types/express-session @types/cors @types/passport @types/passport-local tsx
+
+# Linting
+npm install -D eslint @eslint/js @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint-plugin-react-hooks eslint-plugin-react-refresh globals
+
 ```
 
 ### 5. Run Development Server
@@ -144,6 +141,32 @@ Stop with `Ctrl+C`.
 ```bash
 npx prisma studio
 ```
+
+---
+
+* **Frontend**:
+  * [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/)
+  * [React Router](https://reactrouter.com/) – Client-side routing
+  * [TanStack React Query](https://tanstack.com/query/latest) – Data fetching and caching
+  * [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) – Form handling & schema validation
+  * [Bootstrap](https://getbootstrap.com/) + [Popper.js](https://popper.js.org/) – UI styling and positioning
+* **Backend**:
+  * [Express](https://expressjs.com/) – Web server
+  * [Passport](https://www.passportjs.org/) + [passport-local](http://www.passportjs.org/packages/passport-local/) – Authentication
+  * [express-session](https://github.com/expressjs/session) + [connect-pg-simple](https://github.com/voxpelli/node-connect-pg-simple) – Session management (PostgreSQL store)
+  * [argon2](https://github.com/ranisalt/node-argon2) – Secure password hashing
+  * [helmet](https://helmetjs.github.io/) – Security middleware
+  * [cors](https://github.com/expressjs/cors) – Cross-origin resource sharing
+  * [dotenv](https://github.com/motdotla/dotenv) – Environment variable management
+* **Database**: [PostgreSQL](https://www.postgresql.org/)
+* **ORM**: [Prisma](https://www.prisma.io/)
+* **Testing**: [Vitest](https://vitest.dev/) – Unit testing for frontend
+* **Linting & Formatting**:
+  * ESLint + TypeScript ESLint
+  * Plugins: React Hooks, React Refresh, Globals
+* **Optional Tools**:
+  * [dBeaver](https://dbeaver.io/) – GUI database management
+  * [Prisma Studio](https://www.prisma.io/studio) – Visual data editor
 
 ---
 
