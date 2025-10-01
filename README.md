@@ -109,7 +109,12 @@ npx prisma migrate dev --name init
 npx prisma generate
 ```
 
-### 8. Run Development Server
+### 8. Run Development Server Using Two CLIs
+
+```bash
+npx tsx server/index.ts
+```
+
 
 ```bash
 npm run dev
