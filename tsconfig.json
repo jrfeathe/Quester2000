@@ -7,5 +7,6 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["server", "src", "types"]
 }

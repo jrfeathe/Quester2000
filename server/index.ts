@@ -1,9 +1,19 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
+import passport, { AuthenticateCallback } from "passport";
+import { Strategy as LocalStrategy } from "passport-local";
+import argon2 from "argon2";
 import { PrismaClient } from "../src/generated/prisma";
+import dotenv from "dotenv";
 
-const prisma = new PrismaClient();
+dotenv.config();
 const app = express();
+const prisma = new PrismaClient();
+const PgStore = connectPgSimple(session);
+const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 app.use(express.json());
 app.use(
@@ -13,23 +23,128 @@ app.use(
     })
 );
 
-// POST /api/register  { username: string }
-app.post("/api/register", async (req, res) => {
-    const { username } = req.body as { username?: string };
+// --- Sessions (stored in Postgres) ---
+app.use(
+    session({
+        store: new PgStore({
+            pool,
+            createTableIfMissing: true,
+            tableName: "session",
+        }),
+        name: "qid",                // cookie name
+        secret: process.env.SESSION_SECRET || "dev-secret",
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            httpOnly: true,
+            sameSite: "lax",          // set "none" + secure true if using HTTPS on different domain
+            secure: false,            // true in production behind HTTPS
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        },
+    })
+);
 
-    if (!username || !username.trim()) {
-        return res.status(400).json({ error: "Username is required" });
-    }
+// --- Passport setup ---
+passport.use(
+    new LocalStrategy(async (username, password, done) => {
+        try {
+            const user = await prisma.user.findUnique({ where: { username } });
+            if (!user) return done(null, false, { message: "Invalid credentials" });
+            const ok = await argon2.verify(user.passwordHash, password);
+            if (!ok) return done(null, false, { message: "Invalid credentials" });
+            return done(null, { id: user.id, username: user.username });
+        } catch (e) {
+            return done(e);
+        }
+    })
+);
 
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser(async (id: number, done) => {
     try {
-        const user = await prisma.user.create({
-            data: { username: username.trim() },
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: { id: true, username: true },
         });
-        return res.status(201).json({ id: user.id, username: user.username });
-    } catch (err: unknown) {
-        console.error(err);
+        done(null, user ?? false);
+    } catch (e) {
+        done(e);
+    }
+});
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Helper to protect routes
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+    if (req.isAuthenticated && req.isAuthenticated()) return next();
+    return res.status(401).json({ error: "Unauthorized" });
+}
+
+
+
+// POST /api/register  { username: string }
+// --- Auth routes ---
+
+// Register (creates user AND logs them in)
+app.post("/api/register", async (req, res) => {
+    const { username, password } = req.body ?? {};
+    if (!username?.trim() || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+    }
+    try {
+        const passwordHash = await argon2.hash(password);
+        const user = await prisma.user.create({
+            data: { username: username.trim(), passwordHash },
+            select: { id: true, username: true },
+        });
+        // Manually log in (establish session)
+        req.login(user, (err) => {
+            if (err) return res.status(500).json({ error: "Login after register failed" });
+            return res.status(201).json(user);
+        });
+    } catch (e) {
+        // Unique username collision
+        if (e?.code === "P2002") return res.status(409).json({ error: "Username already taken" });
+        console.error(e);
         return res.status(500).json({ error: "Internal server error" });
     }
+});
+
+// Login (uses passport local)
+app.post(
+    "/api/login",
+    (req: Request, res: Response, next: NextFunction) => {
+        const callback: AuthenticateCallback = (err, user, info) => {
+            if (err) return next(err);
+            if (!user) {
+                const msg =
+                    typeof info === "object" && info !== null && "message" in info
+                        ? (info as { message?: string }).message
+                        : undefined;
+                return res.status(400).json({ error: msg || "Invalid credentials" });
+            }
+
+            req.login(user, (loginErr) => {
+                if (loginErr) return next(loginErr);
+                return res.json(user); // { id, username }
+            });
+        };
+
+        passport.authenticate("local", callback)(req, res, next);
+    }
+);
+
+// Logout
+app.post("/api/logout", (req, res) => {
+    req.logout(() => {
+        res.status(204).end();
+    });
+});
+
+// Example protected route
+app.get("/api/private", requireAuth, (req, res) => {
+    res.json({ message: `Hello ${req.user.username}` });
 });
 
 const PORT = 3000;

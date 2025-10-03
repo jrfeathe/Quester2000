@@ -60,7 +60,7 @@ npm install -D vite @vitejs/plugin-react typescript @types/react @types/react-do
 npm install express express-session connect-pg-simple passport passport-local argon2 cors helmet dotenv @prisma/client pg
 
 # Backend dev dependencies
-npm install -D prisma typescript @types/node @types/express @types/express-session @types/cors @types/passport @types/passport-local tsx
+npm install -D prisma typescript @types/node @types/express @types/express-session @types/cors @types/passport @types/passport-local @types/connect-pg-simple @types/pg tsx
 
 # Linting
 npm install -D eslint @eslint/js @typescript-eslint/parser @typescript-eslint/eslint-plugin eslint-plugin-react-hooks eslint-plugin-react-refresh globals

@@ -1,55 +1,40 @@
-import {useState} from "react";
+import React, { useState } from "react";
+import { useAuth } from "../auth/useAuth";
+import { useNavigate } from "react-router-dom";
 
 function Login() {
-    const [count, setCount] = useState(0);
-    const [state, setState] = useState("Login");
-    const [username, setUsername]= useState("");
+    const { login, register } = useAuth();
+    const nav = useNavigate();
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [mode, setMode] = useState<"login" | "register">("login");
+    const [busy, setBusy] = useState(false);
 
-    async function handleRegister() {
+    async function onSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setBusy(true);
         try {
-            const res = await fetch("http://localhost:3000/api/register", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username }),
-            });
-
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data?.error || `Request failed: ${res.status}`);
-            }
-
-            const user = await res.json();
-            alert(`Registered! id=${user.id}, username=${user.username}`);
-        } catch (e) {
-            alert((e as Error)?.message || "Something went wrong");
+            if (mode === "login") await login(username, password);
+            else await register(username, password);
+            nav("/"); // nav to home
+        } catch (err) {
+            alert((err as Error).message);
+        } finally {
+            setBusy(false);
         }
     }
 
     return (
-        <div>
-            <h2>{state}</h2>
-
-            <button onClick={() => setCount((count) => count + 1)}>
-                count is {count}
+        <form onSubmit={onSubmit}>
+            <h2>{mode === "login" ? "Login" : "Register"}</h2>
+            <input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="username" />
+            <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="password" type="password" />
+            <button type="submit" disabled={busy}>{mode === "login" ? "Login" : "Register"}</button>
+            <button type="button" onClick={() => setMode(mode === "login" ? "register" : "login")} disabled={busy}>
+                Switch to {mode === "login" ? "Register" : "Login"}
             </button>
-
-            <input
-                type="text"
-                placeholder="Username"
-                value={username ?? ""}
-                onChange={(e) => setUsername(e.target.value)}
-            />
-
-            <button onClick={() => {setState("Register"); handleRegister();}}>
-                Register
-            </button>
-
-            <button onClick={() => setState("Login")}>
-                Login
-            </button>
-        </div>
+        </form>
     );
-
 }
 
 export default Login;
