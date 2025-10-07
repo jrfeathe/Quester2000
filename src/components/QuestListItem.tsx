@@ -1,11 +1,15 @@
 import React from 'react';
+import type { Quest } from '../api/quests';
 
-const QuestListItem = () => (
+type QuestListItemProps = {
+    quest: Quest;
+};
+
+const QuestListItem = ({ quest }: QuestListItemProps) => (
     <div className="quest-list-item">
-        <h2>Quest</h2>
-        <p>Defeat the dragon in the northern mountains.</p>
+        <h2>{quest.title}</h2>
+        {quest.details ? <p>{quest.details}</p> : <p>No additional details provided.</p>}
     </div>
 );
 
 export default QuestListItem;
-

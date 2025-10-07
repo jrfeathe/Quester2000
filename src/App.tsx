@@ -7,6 +7,8 @@ import { useAuth } from "./auth/useAuth";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
+import Quests from "./pages/Quests"
+import NavController from "./components/NavController";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { me, loading } = useAuth();
@@ -24,13 +26,15 @@ function App() {
                     <Routes>
                         <Route path="/login" element={<Login />} />
                         <Route
-                            path="/"
                             element={
                                 <PrivateRoute>
-                                    <Home />
+                                    <NavController />
                                 </PrivateRoute>
                             }
-                        />
+                        >
+                            <Route path="/" element={<Home />} />
+                            <Route path="/quests" element={<Quests />} />
+                        </Route>
                     </Routes>
                 </BrowserRouter>
             </AuthProvider>

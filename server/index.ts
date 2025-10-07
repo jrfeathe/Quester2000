@@ -81,7 +81,25 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
     return res.status(401).json({ error: "Unauthorized" });
 }
 
-
+app.get("/api/quests", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+    try {
+        const quests = await prisma.quest.findMany({
+            where: { userId },
+            orderBy: { createdAt: "desc" },
+        });
+        return res.json(quests);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to load quests" });
+    }
+});
 
 // POST /api/register  { username: string }
 // --- Auth routes ---
