@@ -101,6 +101,67 @@ app.get("/api/quests", requireAuth, async (req, res) => {
     }
 });
 
+app.post("/api/quests", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { title, details } = req.body ?? {};
+    const trimmedTitle = typeof title === "string" ? title.trim() : "";
+    if (!trimmedTitle) {
+        return res.status(400).json({ error: "Title is required" });
+    }
+
+    const trimmedDetails =
+        typeof details === "string" && details.trim().length > 0 ? details.trim() : null;
+
+    try {
+        const quest = await prisma.quest.create({
+            data: {
+                title: trimmedTitle,
+                details: trimmedDetails,
+                userId,
+            },
+        });
+        return res.status(201).json(quest);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to create quest" });
+    }
+});
+
+app.delete("/api/quests/:id", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const questId = Number(req.params.id);
+    if (!Number.isInteger(questId) || questId <= 0) {
+        return res.status(400).json({ error: "Invalid quest id" });
+    }
+
+    try {
+        const result = await prisma.quest.deleteMany({
+            where: { id: questId, userId },
+        });
+        if (result.count === 0) {
+            return res.status(404).json({ error: "Quest not found" });
+        }
+        return res.status(204).send();
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to delete quest" });
+    }
+});
+
 // POST /api/register  { username: string }
 // --- Auth routes ---
 

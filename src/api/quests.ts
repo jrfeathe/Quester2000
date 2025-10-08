@@ -5,7 +5,12 @@ export type Quest = {
     createdAt: string;
 };
 
-const BASE = "http://localhost:3000";
+export type CreateQuestInput = {
+    title: string;
+    details?: string;
+};
+
+const BASE = 'http://localhost:3000';
 
 export async function list(): Promise<Quest[]> {
     const r = await fetch(`${BASE}/api/quests`, {
@@ -16,7 +21,38 @@ export async function list(): Promise<Quest[]> {
             .json()
             .then((body) => body?.error as string | undefined)
             .catch(() => undefined);
-        throw new Error(message || "Unable to load quests");
+        throw new Error(message || 'Unable to load quests');
     }
     return r.json();
+}
+
+export async function create(input: CreateQuestInput): Promise<Quest> {
+    const r = await fetch(`${BASE}/api/quests`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to create quest');
+    }
+    return r.json();
+}
+
+export async function remove(id: number): Promise<void> {
+    const r = await fetch(`${BASE}/api/quests/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to delete quest');
+    }
 }

@@ -1,6 +1,4 @@
-import React, { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import React from 'react'
 import './App.css'
 import { AuthProvider } from "./auth/AuthProvider";
 import { useAuth } from "./auth/useAuth";
@@ -9,6 +7,7 @@ import Login from "./pages/Login";
 import Home from "./pages/Home";
 import Quests from "./pages/Quests"
 import NavController from "./components/NavController";
+import About from "./pages/About";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { me, loading } = useAuth();
@@ -17,7 +16,6 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 }
 
 function App() {
-    const [count, setCount] = useState(0)
 
     return (
         <>
@@ -34,30 +32,11 @@ function App() {
                         >
                             <Route path="/" element={<Home />} />
                             <Route path="/quests" element={<Quests />} />
+                            <Route path="/about" element={<About />} />
                         </Route>
                     </Routes>
                 </BrowserRouter>
             </AuthProvider>
-            <div>
-                <a href="https://vite.dev" target="_blank">
-                    <img src={viteLogo} className="logo" alt="Vite logo" />
-                </a>
-                <a href="https://react.dev" target="_blank">
-                    <img src={reactLogo} className="logo react" alt="React logo" />
-                </a>
-            </div>
-            <h1>Vite + React</h1>
-            <div className="card">
-                <button onClick={() => setCount((count) => count + 1)}>
-                    count is {count}
-                </button>
-                <p>
-                    Edit <code>src/App.tsx</code> and save to test HMR
-                </p>
-            </div>
-            <p className="read-the-docs">
-                Click on the Vite and React logos to learn more
-            </p>
         </>
     )
 }
