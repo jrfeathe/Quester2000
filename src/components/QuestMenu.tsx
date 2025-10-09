@@ -4,9 +4,10 @@ import type { Quest } from '../api/quests';
 type QuestMenuProps = {
     quests: Quest[];
     onDelete?: (id: number) => void;
+    onToggleComplete?: (id: number, nextCompleted: boolean) => void;
 };
 
-const QuestMenu = ({ quests, onDelete }: QuestMenuProps) => (
+const QuestMenu = ({ quests, onDelete, onToggleComplete }: QuestMenuProps) => (
     <main>
         {quests.length === 0 ? (
             <p>No quests found yet.</p>
@@ -16,11 +17,19 @@ const QuestMenu = ({ quests, onDelete }: QuestMenuProps) => (
                     <li key={quest.id} style={{ margin: '1rem 0' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
                             <QuestListItem quest={quest} />
-                            {onDelete ? (
-                                <button type="button" onClick={() => onDelete(quest.id)}>
-                                    Delete
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => onToggleComplete?.(quest.id, !quest.completed)}
+                                >
+                                    {quest.completed ? 'Mark as incomplete' : 'Mark as complete'}
                                 </button>
-                            ) : null}
+                                {onDelete ? (
+                                    <button type="button" onClick={() => onDelete(quest.id)}>
+                                        Delete
+                                    </button>
+                                ) : null}
+                            </div>
                         </div>
                     </li>
                 ))}

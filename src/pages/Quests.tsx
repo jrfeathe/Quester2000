@@ -2,7 +2,12 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import QuestMenu from '../components/QuestMenu';
 import type { Quest } from '../api/quests';
-import { create as createQuest, list as fetchQuests, remove as deleteQuest } from '../api/quests';
+import {
+    create as createQuest,
+    list as fetchQuests,
+    remove as deleteQuest,
+    updateCompletion as toggleQuestCompletion,
+} from '../api/quests';
 
 const Quests = () => {
     const [quests, setQuests] = useState<Quest[]>([]);
@@ -70,6 +75,17 @@ const Quests = () => {
         }
     };
 
+    const handleToggleComplete = async (questId: number, nextCompleted: boolean) => {
+        try {
+            const updated = await toggleQuestCompletion(questId, nextCompleted);
+            setQuests((prev) =>
+                prev.map((quest) => (quest.id === updated.id ? updated : quest))
+            );
+        } catch (err) {
+            alert((err as Error).message);
+        }
+    };
+
     if (loading) return <div>Loading quests…</div>;
     if (error) return <div>Failed to load quests: {error}</div>;
 
@@ -79,7 +95,7 @@ const Quests = () => {
                 <h1>Quests</h1>
                 <button type="button" onClick={openDialog}>Add Quest</button>
             </div>
-            <QuestMenu quests={quests} onDelete={handleDelete} />
+            <QuestMenu quests={quests} onDelete={handleDelete} onToggleComplete={handleToggleComplete} />
             {isDialogOpen && (
                 <div
                     role="dialog"

@@ -3,6 +3,7 @@ export type Quest = {
     title: string;
     details: string | null;
     createdAt: string;
+    completed: boolean;
 };
 
 export type CreateQuestInput = {
@@ -55,4 +56,21 @@ export async function remove(id: number): Promise<void> {
             .catch(() => undefined);
         throw new Error(message || 'Unable to delete quest');
     }
+}
+
+export async function updateCompletion(id: number, completed: boolean): Promise<Quest> {
+    const r = await fetch(`${BASE}/api/quests/${id}`, {
+        method: 'PATCH',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed }),
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to update quest');
+    }
+    return r.json();
 }
