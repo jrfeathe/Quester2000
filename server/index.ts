@@ -110,7 +110,7 @@ app.post("/api/quests", requireAuth, async (req, res) => {
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { title, details } = req.body ?? {};
+    const { title, details, group } = req.body ?? {};
     const trimmedTitle = typeof title === "string" ? title.trim() : "";
     if (!trimmedTitle) {
         return res.status(400).json({ error: "Title is required" });
@@ -118,12 +118,15 @@ app.post("/api/quests", requireAuth, async (req, res) => {
 
     const trimmedDetails =
         typeof details === "string" && details.trim().length > 0 ? details.trim() : null;
+    const trimmedGroup =
+        typeof group === "string" && group.trim().length > 0 ? group.trim() : "General";
 
     try {
         const quest = await prisma.quest.create({
             data: {
                 title: trimmedTitle,
                 details: trimmedDetails,
+                group: trimmedGroup,
                 userId,
             },
         });

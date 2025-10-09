@@ -4,11 +4,13 @@ export type Quest = {
     details: string | null;
     createdAt: string;
     completed: boolean;
+    group: string;
 };
 
 export type CreateQuestInput = {
     title: string;
     details?: string;
+    group?: string;
 };
 
 const BASE = 'http://localhost:3000';

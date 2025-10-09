@@ -28,6 +28,7 @@ model Quest {
   title     String
   details   String?
   completed Boolean  @default(false)
+  group     String   @default("General")
   userId    Int
   user      User     @relation(fields: [userId], references: [id])
 

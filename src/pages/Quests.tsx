@@ -16,6 +16,7 @@ const Quests = () => {
     const [isDialogOpen, setDialogOpen] = useState(false);
     const [title, setTitle] = useState('');
     const [details, setDetails] = useState('');
+    const [group, setGroup] = useState('General');
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
@@ -29,6 +30,7 @@ const Quests = () => {
     const resetDialog = () => {
         setTitle('');
         setDetails('');
+        setGroup('General');
         setFormError(null);
         setSubmitting(false);
     };
@@ -54,6 +56,7 @@ const Quests = () => {
             const quest = await createQuest({
                 title: title.trim(),
                 details: details.trim() ? details.trim() : undefined,
+                group: group.trim() ? group.trim() : undefined,
             });
             setQuests((prev) => [quest, ...prev]);
             closeDialog();
@@ -134,6 +137,16 @@ const Quests = () => {
                                 style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
                                 disabled={submitting}
                                 rows={4}
+                            />
+                        </label>
+                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                            Group (optional)
+                            <input
+                                value={group}
+                                onChange={(e) => setGroup(e.target.value)}
+                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+                                disabled={submitting}
+                                placeholder="General"
                             />
                         </label>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
