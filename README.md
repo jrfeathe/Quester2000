@@ -123,10 +123,10 @@ npm run dev
 Stop with `Ctrl+C`.
 
 ### When making changes to database structure
+FIRST: Delete migration folders in prisma/migrations
 ```bash
 npx prisma migrate reset
 ```
-Delete migration folders in prisma/migrations
 ```bash
 npx prisma migrate dev --name init
 ```

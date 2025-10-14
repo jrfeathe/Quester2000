@@ -1,0 +1,77 @@
+export type Item = {
+    id: number;
+    name: string;
+    description: string | null;
+    createdAt: string;
+    quantity: number;
+    category: string;
+};
+
+export type CreateItemInput = {
+    name: string;
+    description?: string;
+    category?: string;
+    quantity?: number;
+};
+
+const BASE = 'http://localhost:3000';
+
+export async function list(): Promise<Item[]> {
+    const r = await fetch(`${BASE}/api/items`, {
+        credentials: 'include',
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to load items');
+    }
+    return r.json();
+}
+
+export async function create(input: CreateItemInput): Promise<Item> {
+    const r = await fetch(`${BASE}/api/items`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to create item');
+    }
+    return r.json();
+}
+
+export async function remove(id: number): Promise<void> {
+    const r = await fetch(`${BASE}/api/items/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to delete item');
+    }
+}
+
+export async function use(id: number): Promise<Item> {
+    const r = await fetch(`${BASE}/api/items/${id}/use`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to use item');
+    }
+    return r.json();
+}

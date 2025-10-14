@@ -20,18 +20,42 @@ model User {
   username     String   @unique
   passwordHash String
   quests       Quest[]
+  items        Item[]
 }
 
 model Quest {
-  id        Int      @id @default(autoincrement())
-  createdAt DateTime @default(now())
-  title     String
-  details   String?
-  completed Boolean  @default(false)
-  group     String   @default("General")
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  title       String
+  details     String?
+  completed   Boolean  @default(false)
+  group       String   @default("General")
+  rewardBody  Int      @default(0)
+  rewardMind  Int      @default(0)
+  rewardSoul  Int      @default(0)
+  rewardItems Item[]
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@map("Quests")
+}
+
+model Item {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  title       String
+  icon        String?
+  description String?
+  category    String   @default("General")
+  quantity    Int      @default(0)
+  priceBody   Int      @default(0)
+  priceMind   Int      @default(0)
+  priceSoul   Int      @default(0)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  Quest       Quest[]
+
+  @@index([userId])
+  @@map("Items")
 }
