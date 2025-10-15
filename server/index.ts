@@ -202,6 +202,137 @@ app.patch("/api/quests/:id", requireAuth, async (req, res) => {
     }
 });
 
+app.get("/api/items", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+        const items = await prisma.item.findMany({
+            where: { userId },
+            orderBy: { createdAt: "desc" },
+        });
+        return res.json(items);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to load items" });
+    }
+});
+
+app.post("/api/items", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { name, description, category, quantity } = req.body ?? {};
+    const trimmedName = typeof name === "string" ? name.trim() : "";
+    if (!trimmedName) {
+        return res.status(400).json({ error: "Item name is required" });
+    }
+
+    const trimmedDescription =
+        typeof description === "string" && description.trim().length > 0
+            ? description.trim()
+            : null;
+    const trimmedCategory =
+        typeof category === "string" && category.trim().length > 0
+            ? category.trim()
+            : "General";
+    const parsedQuantity =
+        typeof quantity === "number" && Number.isFinite(quantity) ? quantity : 1;
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
+        return res.status(400).json({ error: "Quantity must be a positive integer" });
+    }
+
+    try {
+        const item = await prisma.item.create({
+            data: {
+                title: trimmedName,
+                description: trimmedDescription,
+                category: trimmedCategory,
+                quantity: parsedQuantity,
+                userId,
+            },
+        });
+        return res.status(201).json(item);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to create item" });
+    }
+});
+
+app.delete("/api/items/:id", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const itemId = Number(req.params.id);
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+        return res.status(400).json({ error: "Invalid item id" });
+    }
+
+    try {
+        const result = await prisma.item.deleteMany({
+            where: { id: itemId, userId },
+        });
+        if (result.count === 0) {
+            return res.status(404).json({ error: "Item not found" });
+        }
+        return res.status(204).send();
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to delete item" });
+    }
+});
+
+app.post("/api/items/:id/use", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const itemId = Number(req.params.id);
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+        return res.status(400).json({ error: "Invalid item id" });
+    }
+
+    try {
+        const existing = await prisma.item.findFirst({
+            where: { id: itemId, userId },
+        });
+        if (!existing) {
+            return res.status(404).json({ error: "Item not found" });
+        }
+        if (existing.quantity <= 0) {
+            return res.status(400).json({ error: "Item has no remaining quantity" });
+        }
+
+        const updated = await prisma.item.update({
+            where: { id: existing.id },
+            data: { quantity: existing.quantity - 1 },
+        });
+        return res.json(updated);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to use item" });
+    }
+});
+
 // POST /api/register  { username: string }
 // --- Auth routes ---
 

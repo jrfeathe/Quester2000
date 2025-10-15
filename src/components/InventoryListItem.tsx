@@ -6,7 +6,7 @@ type InventoryListItemProps = {
 
 const InventoryListItem = ({ item }: InventoryListItemProps) => (
     <div className="inventory-list-item">
-        <h2>{item.name}</h2>
+        <h2>{item.title}</h2>
         <p>Category: {item.category}</p>
         <p>Quantity: {item.quantity}</p>
         {item.description ? <p>{item.description}</p> : <p>No description provided.</p>}

@@ -1,10 +1,15 @@
 export type Item = {
     id: number;
-    name: string;
-    description: string | null;
     createdAt: string;
-    quantity: number;
+    title: string;
+    icon: string | null;
+    description: string | null;
     category: string;
+    quantity: number;
+    priceBody: number;
+    priceMind: number;
+    priceSoul: number;
+    userId: number;
 };
 
 export type CreateItemInput = {
