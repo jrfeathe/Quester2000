@@ -9,6 +9,9 @@ const NavController = () => (
             <NavLink to="/quests">
                 Quests
             </NavLink>
+            <NavLink to="/shop">
+                Shop
+            </NavLink>
             <NavLink to="/inventory">
                 Inventory
             </NavLink>

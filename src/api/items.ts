@@ -80,3 +80,18 @@ export async function use(id: number): Promise<Item> {
     }
     return r.json();
 }
+
+export async function buy(id: number): Promise<Item> {
+    const r = await fetch(`${BASE}/api/items/${id}/buy`, {
+        method: 'POST',
+        credentials: 'include',
+    });
+    if (!r.ok) {
+        const message = await r
+            .json()
+            .then((body) => body?.error as string | undefined)
+            .catch(() => undefined);
+        throw new Error(message || 'Unable to buy item');
+    }
+    return r.json();
+}

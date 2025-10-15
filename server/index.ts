@@ -248,7 +248,7 @@ app.post("/api/items", requireAuth, async (req, res) => {
             : "General";
     const parsedQuantity =
         typeof quantity === "number" && Number.isFinite(quantity) ? quantity : 1;
-    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
+    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 0) {
         return res.status(400).json({ error: "Quantity must be a positive integer" });
     }
 
@@ -330,6 +330,39 @@ app.post("/api/items/:id/use", requireAuth, async (req, res) => {
     } catch (e) {
         console.error(e);
         return res.status(500).json({ error: "Failed to use item" });
+    }
+});
+
+app.post("/api/items/:id/buy", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const itemId = Number(req.params.id);
+    if (!Number.isInteger(itemId) || itemId <= 0) {
+        return res.status(400).json({ error: "Invalid item id" });
+    }
+
+    try {
+        const existing = await prisma.item.findFirst({
+            where: { id: itemId, userId },
+        });
+        if (!existing) {
+            return res.status(404).json({ error: "Item not found" });
+        }
+
+        const updated = await prisma.item.update({
+            where: { id: existing.id },
+            data: { quantity: existing.quantity + 1 },
+        });
+        return res.json(updated);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to buy item" });
     }
 });
 

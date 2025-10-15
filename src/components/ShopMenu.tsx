@@ -1,14 +1,14 @@
-import InventoryListItem from './InventoryListItem';
+import ShopListItem from './ShopListItem';
 import type { Item } from '../api/items';
 
-type InventoryMenuProps = {
+type ShopMenuProps = {
     items: Item[];
     onDelete?: (id: number) => void;
-    onUse?: (id: number) => void;
+    onBuy?: (id: number) => void;
 };
 
-const InventoryMenu = ({ items, onDelete, onUse }: InventoryMenuProps) => {
-    const filteredItems = items.filter((item) => item.quantity > 0);
+const ShopMenu = ({ items, onDelete, onBuy }: ShopMenuProps) => {
+    const filteredItems = items;
 
     return (
         <main>
@@ -19,14 +19,14 @@ const InventoryMenu = ({ items, onDelete, onUse }: InventoryMenuProps) => {
                     {filteredItems.map((item) => (
                         <li key={item.id} style={{ margin: '1rem 0' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', alignItems: 'center' }}>
-                                <InventoryListItem item={item} />
+                                <ShopListItem item={item} />
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                                     <button
                                         type="button"
-                                        onClick={() => onUse?.(item.id)}
-                                        disabled={item.quantity <= 0}
+                                        onClick={() => onBuy?.(item.id)}
+                                        //disabled={item.quantity <= 0}
                                     >
-                                        Use
+                                        Buy
                                     </button>
                                     {onDelete ? (
                                         <button type="button" onClick={() => onDelete(item.id)}>
@@ -43,4 +43,4 @@ const InventoryMenu = ({ items, onDelete, onUse }: InventoryMenuProps) => {
     );
 };
 
-export default InventoryMenu;
+export default ShopMenu;

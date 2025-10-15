@@ -9,6 +9,7 @@ import Quests from "./pages/Quests"
 import NavController from "./components/NavController";
 import About from "./pages/About";
 import Inventory from "./pages/Inventory"
+import Shop from "./pages/Shop";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { me, loading } = useAuth();
@@ -33,6 +34,7 @@ function App() {
                         >
                             <Route path="/" element={<Home />} />
                             <Route path="/quests" element={<Quests />} />
+                            <Route path="/shop" element={<Shop />} />
                             <Route path="/inventory" element={<Inventory />} />
                             <Route path="/about" element={<About />} />
                         </Route>
