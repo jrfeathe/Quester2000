@@ -17,6 +17,9 @@ export type CreateItemInput = {
     description?: string;
     category?: string;
     quantity?: number;
+    priceBody?: number;
+    priceMind?: number;
+    priceSoul?: number;
 };
 
 const BASE = 'http://localhost:3000';

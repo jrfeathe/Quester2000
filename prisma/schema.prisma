@@ -19,6 +19,9 @@ model User {
   createdAt    DateTime @default(now())
   username     String   @unique
   passwordHash String
+  pointsBody   Int      @default(0)
+  pointsMind   Int      @default(0)
+  pointsSoul   Int      @default(0)
   quests       Quest[]
   items        Item[]
 }

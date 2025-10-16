@@ -81,6 +81,27 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
     return res.status(401).json({ error: "Unauthorized" });
 }
 
+type ItemCost = {
+    body: number;
+    mind: number;
+    soul: number;
+};
+
+function getItemCost(item: {
+    priceBody: number;
+    priceMind: number;
+    priceSoul: number;
+}): ItemCost {
+    const toCost = (value: number) =>
+        Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+
+    return {
+        body: toCost(item.priceBody),
+        mind: toCost(item.priceMind),
+        soul: toCost(item.priceSoul),
+    };
+}
+
 app.get("/api/quests", requireAuth, async (req, res) => {
     const userId =
         typeof req.user === "object" && req.user !== null && "id" in req.user
@@ -223,6 +244,30 @@ app.get("/api/items", requireAuth, async (req, res) => {
     }
 });
 
+app.get("/api/user/points", requireAuth, async (req, res) => {
+    const userId =
+        typeof req.user === "object" && req.user !== null && "id" in req.user
+            ? Number((req.user as { id: number }).id)
+            : null;
+    if (!userId) {
+        return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { pointsBody: true, pointsMind: true, pointsSoul: true },
+        });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        return res.json(user);
+    } catch (e) {
+        console.error(e);
+        return res.status(500).json({ error: "Failed to load points" });
+    }
+});
+
 app.post("/api/items", requireAuth, async (req, res) => {
     const userId =
         typeof req.user === "object" && req.user !== null && "id" in req.user
@@ -232,7 +277,8 @@ app.post("/api/items", requireAuth, async (req, res) => {
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { name, description, category, quantity } = req.body ?? {};
+    const { name, description, category, quantity, priceBody, priceMind, priceSoul } =
+        req.body ?? {};
     const trimmedName = typeof name === "string" ? name.trim() : "";
     if (!trimmedName) {
         return res.status(400).json({ error: "Item name is required" });
@@ -251,6 +297,21 @@ app.post("/api/items", requireAuth, async (req, res) => {
     if (!Number.isInteger(parsedQuantity) || parsedQuantity < 0) {
         return res.status(400).json({ error: "Quantity must be a positive integer" });
     }
+    const parsedPriceBody =
+        typeof priceBody === "number" && Number.isFinite(priceBody) ? priceBody : 0;
+    if (!Number.isInteger(parsedPriceBody) || parsedPriceBody < 0) {
+        return res.status(400).json({ error: "Body price must be a non-negative integer" });
+    }
+    const parsedPriceMind =
+        typeof priceMind === "number" && Number.isFinite(priceMind) ? priceMind : 0;
+    if (!Number.isInteger(parsedPriceMind) || parsedPriceMind < 0) {
+        return res.status(400).json({ error: "Mind price must be a non-negative integer" });
+    }
+    const parsedPriceSoul =
+        typeof priceSoul === "number" && Number.isFinite(priceSoul) ? priceSoul : 0;
+    if (!Number.isInteger(parsedPriceSoul) || parsedPriceSoul < 0) {
+        return res.status(400).json({ error: "Soul price must be a non-negative integer" });
+    }
 
     try {
         const item = await prisma.item.create({
@@ -259,6 +320,9 @@ app.post("/api/items", requireAuth, async (req, res) => {
                 description: trimmedDescription,
                 category: trimmedCategory,
                 quantity: parsedQuantity,
+                priceBody: parsedPriceBody,
+                priceMind: parsedPriceMind,
+                priceSoul: parsedPriceSoul,
                 userId,
             },
         });
@@ -348,19 +412,59 @@ app.post("/api/items/:id/buy", requireAuth, async (req, res) => {
     }
 
     try {
-        const existing = await prisma.item.findFirst({
-            where: { id: itemId, userId },
-        });
-        if (!existing) {
-            return res.status(404).json({ error: "Item not found" });
-        }
+        const updated = await prisma.$transaction(async (tx) => {
+            const existing = await tx.item.findFirst({
+                where: { id: itemId, userId },
+            });
+            if (!existing) {
+                throw new Error("ITEM_NOT_FOUND");
+            }
 
-        const updated = await prisma.item.update({
-            where: { id: existing.id },
-            data: { quantity: existing.quantity + 1 },
+            const cost = getItemCost(existing);
+            const totalCost = cost.body + cost.mind + cost.soul;
+            if (totalCost > 0) {
+                const user = await tx.user.findUnique({
+                    where: { id: userId },
+                    select: { pointsBody: true, pointsMind: true, pointsSoul: true },
+                });
+                if (!user) {
+                    throw new Error("USER_NOT_FOUND");
+                }
+                if (
+                    user.pointsBody < cost.body ||
+                    user.pointsMind < cost.mind ||
+                    user.pointsSoul < cost.soul
+                ) {
+                    throw new Error("INSUFFICIENT_POINTS");
+                }
+                await tx.user.update({
+                    where: { id: userId },
+                    data: {
+                        ...(cost.body > 0 ? { pointsBody: { decrement: cost.body } } : {}),
+                        ...(cost.mind > 0 ? { pointsMind: { decrement: cost.mind } } : {}),
+                        ...(cost.soul > 0 ? { pointsSoul: { decrement: cost.soul } } : {}),
+                    },
+                });
+            }
+
+            return tx.item.update({
+                where: { id: existing.id },
+                data: { quantity: { increment: 1 } },
+            });
         });
         return res.json(updated);
     } catch (e) {
+        if (e instanceof Error) {
+            if (e.message === "ITEM_NOT_FOUND") {
+                return res.status(404).json({ error: "Item not found" });
+            }
+            if (e.message === "USER_NOT_FOUND") {
+                return res.status(404).json({ error: "User not found" });
+            }
+            if (e.message === "INSUFFICIENT_POINTS") {
+                return res.status(400).json({ error: "Not enough points" });
+            }
+        }
         console.error(e);
         return res.status(500).json({ error: "Failed to buy item" });
     }
