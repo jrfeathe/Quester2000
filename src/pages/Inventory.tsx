@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
 import InventoryMenu from '../components/InventoryMenu';
 import UserPointsSummary from '../components/UserPointsSummary';
+import ItemDesigner, { type ItemDesignerResult } from '../components/ItemDesigner';
 import type { Item } from '../api/items';
 import {
     create as createItem,
@@ -15,12 +15,6 @@ const Inventory = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isDialogOpen, setDialogOpen] = useState(false);
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('General');
-    const [quantity, setQuantity] = useState('1');
-    const [formError, setFormError] = useState<string | null>(null);
-    const [submitting, setSubmitting] = useState(false);
     const [pointsRefreshKey, setPointsRefreshKey] = useState(0);
 
     useEffect(() => {
@@ -30,50 +24,22 @@ const Inventory = () => {
             .finally(() => setLoading(false));
     }, []);
 
-    const resetDialog = () => {
-        setName('');
-        setDescription('');
-        setCategory('General');
-        setQuantity('1');
-        setFormError(null);
-        setSubmitting(false);
-    };
-
     const closeDialog = () => {
         setDialogOpen(false);
-        resetDialog();
     };
 
     const openDialog = () => {
-        setFormError(null);
         setDialogOpen(true);
     };
 
-    const handleSubmit = async (event: FormEvent) => {
-        event.preventDefault();
-        if (!name.trim()) {
-            setFormError('Item name is required');
-            return;
-        }
-        const parsedQuantity = Number.parseInt(quantity, 10);
-        if (Number.isNaN(parsedQuantity) || parsedQuantity < 1) {
-            setFormError('Quantity must be a positive number');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            const item = await createItem({
-                name: name.trim(),
-                description: description.trim() ? description.trim() : undefined,
-                category: category.trim() ? category.trim() : undefined,
-                quantity: parsedQuantity,
-            });
-            setItems((prev) => [item, ...prev]);
-            closeDialog();
-        } catch (err) {
-            setFormError((err as Error).message);
-            setSubmitting(false);
-        }
+    const handleCreateItem = async (values: ItemDesignerResult) => {
+        const item = await createItem({
+            name: values.name,
+            description: values.description,
+            category: values.category,
+            quantity: values.quantity ?? 1,
+        });
+        setItems((prev) => [item, ...prev]);
     };
 
     const handleDelete = async (itemId: number) => {
@@ -122,74 +88,13 @@ const Inventory = () => {
                 <button type="button" onClick={openDialog}>Add Item</button>
             </div>
             <InventoryMenu items={items} onDelete={handleDelete} onUse={handleUse} />
-            {isDialogOpen && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="add-item-heading"
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '1rem',
-                    }}
-                >
-                    <form
-                        onSubmit={handleSubmit}
-                        style={{ background: '#223', padding: '1.5rem', borderRadius: '0.5rem', minWidth: '280px' }}
-                    >
-                        <h2 id="add-item-heading" style={{ marginTop: 0 }}>Add Item</h2>
-                        {formError ? <p style={{ color: 'red' }}>{formError}</p> : null}
-                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Name
-                            <input
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                disabled={submitting}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Description (optional)
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                disabled={submitting}
-                                rows={4}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Category (optional)
-                            <input
-                                value={category}
-                                onChange={(e) => setCategory(e.target.value)}
-                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                disabled={submitting}
-                                placeholder="General"
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Quantity
-                            <input
-                                value={quantity}
-                                onChange={(e) => setQuantity(e.target.value)}
-                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                disabled={submitting}
-                                type="number"
-                                min="1"
-                            />
-                        </label>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                            <button type="button" onClick={closeDialog} disabled={submitting}>Cancel</button>
-                            <button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
-                        </div>
-                    </form>
-                </div>
-            )}
+            <ItemDesigner
+                isOpen={isDialogOpen}
+                heading="Add Item"
+                includeQuantity
+                onClose={closeDialog}
+                onSubmit={handleCreateItem}
+            />
         </div>
     );
 };
