@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import InventoryMenu from '../components/InventoryMenu';
+import UserPointsSummary from '../components/UserPointsSummary';
 import type { Item } from '../api/items';
 import {
     create as createItem,
@@ -20,6 +21,7 @@ const Inventory = () => {
     const [quantity, setQuantity] = useState('1');
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [pointsRefreshKey, setPointsRefreshKey] = useState(0);
 
     useEffect(() => {
         fetchItems()
@@ -98,6 +100,7 @@ const Inventory = () => {
             setItems((prev) =>
                 prev.map((item) => (item.id === updated.id ? updated : item))
             );
+            setPointsRefreshKey((prev) => prev + 1);
         } catch (err) {
             alert((err as Error).message);
         }
@@ -109,7 +112,13 @@ const Inventory = () => {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Inventory</h1>
+                <div>
+                    <h1 style={{ marginBottom: '0.25rem' }}>Inventory</h1>
+                    <UserPointsSummary
+                        refreshKey={pointsRefreshKey}
+                        style={{ margin: 0, fontSize: '0.9rem', color: '#ccc' }}
+                    />
+                </div>
                 <button type="button" onClick={openDialog}>Add Item</button>
             </div>
             <InventoryMenu items={items} onDelete={handleDelete} onUse={handleUse} />

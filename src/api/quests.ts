@@ -5,12 +5,18 @@ export type Quest = {
     createdAt: string;
     completed: boolean;
     group: string;
+    rewardBody: number;
+    rewardMind: number;
+    rewardSoul: number;
 };
 
 export type CreateQuestInput = {
     title: string;
     details?: string;
     group?: string;
+    rewardBody?: number;
+    rewardMind?: number;
+    rewardSoul?: number;
 };
 
 const BASE = 'http://localhost:3000';

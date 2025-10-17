@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import ShopMenu from '../components/ShopMenu';
+import UserPointsSummary from '../components/UserPointsSummary';
 import type { Item } from '../api/items';
 import {
     create as createItem,
@@ -9,7 +10,6 @@ import {
     buy as buyItem,
 } from '../api/items';
 import type { PointsBalance } from '../api/user';
-import { getPoints } from '../api/user';
 
 const Shop = () => {
     const [items, setItems] = useState<Item[]>([]);
@@ -24,14 +24,11 @@ const Shop = () => {
     const [priceSoul, setPriceSoul] = useState('0');
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [points, setPoints] = useState<PointsBalance | null>(null);
+    const [pointsRefreshKey, setPointsRefreshKey] = useState(0);
 
     useEffect(() => {
-        Promise.all([fetchItems(), getPoints()])
-            .then(([loadedItems, loadedPoints]) => {
-                setItems(loadedItems);
-                setPoints(loadedPoints);
-            })
+        fetchItems()
+            .then(setItems)
             .catch((err: Error) => setError(err.message))
             .finally(() => setLoading(false));
     }, []);
@@ -128,14 +125,7 @@ const Shop = () => {
                 prev.map((item) => (item.id === updated.id ? updated : item))
             );
             if (cost.pointsBody > 0 || cost.pointsMind > 0 || cost.pointsSoul > 0) {
-                setPoints((prev) => {
-                    if (!prev) return prev;
-                    return {
-                        pointsBody: Math.max(0, prev.pointsBody - cost.pointsBody),
-                        pointsMind: Math.max(0, prev.pointsMind - cost.pointsMind),
-                        pointsSoul: Math.max(0, prev.pointsSoul - cost.pointsSoul),
-                    };
-                });
+                setPointsRefreshKey((prev) => prev + 1);
             }
         } catch (err) {
             alert((err as Error).message);
@@ -150,11 +140,10 @@ const Shop = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                     <h1 style={{ marginBottom: '0.25rem' }}>Shop</h1>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#ccc' }}>
-                        {points
-                            ? `Body ${points.pointsBody} · Mind ${points.pointsMind} · Soul ${points.pointsSoul}`
-                            : 'Loading points…'}
-                    </p>
+                    <UserPointsSummary
+                        refreshKey={pointsRefreshKey}
+                        style={{ margin: 0, fontSize: '0.9rem', color: '#ccc' }}
+                    />
                 </div>
                 <button type="button" onClick={openDialog}>Add Item</button>
             </div>

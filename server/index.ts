@@ -131,7 +131,7 @@ app.post("/api/quests", requireAuth, async (req, res) => {
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { title, details, group } = req.body ?? {};
+    const { title, details, group, rewardBody, rewardMind, rewardSoul } = req.body ?? {};
     const trimmedTitle = typeof title === "string" ? title.trim() : "";
     if (!trimmedTitle) {
         return res.status(400).json({ error: "Title is required" });
@@ -142,12 +142,34 @@ app.post("/api/quests", requireAuth, async (req, res) => {
     const trimmedGroup =
         typeof group === "string" && group.trim().length > 0 ? group.trim() : "General";
 
+    const parseReward = (value: unknown, label: string) => {
+        const numeric = typeof value === "number" && Number.isFinite(value) ? value : 0;
+        if (!Number.isInteger(numeric) || numeric < 0) {
+            throw new Error(`${label} must be a non-negative integer`);
+        }
+        return numeric;
+    };
+
+    let parsedRewardBody = 0;
+    let parsedRewardMind = 0;
+    let parsedRewardSoul = 0;
+    try {
+        parsedRewardBody = parseReward(rewardBody, "Body reward");
+        parsedRewardMind = parseReward(rewardMind, "Mind reward");
+        parsedRewardSoul = parseReward(rewardSoul, "Soul reward");
+    } catch (parseError) {
+        return res.status(400).json({ error: (parseError as Error).message });
+    }
+
     try {
         const quest = await prisma.quest.create({
             data: {
                 title: trimmedTitle,
                 details: trimmedDetails,
                 group: trimmedGroup,
+                rewardBody: parsedRewardBody,
+                rewardMind: parsedRewardMind,
+                rewardSoul: parsedRewardSoul,
                 userId,
             },
         });
@@ -208,16 +230,66 @@ app.patch("/api/quests/:id", requireAuth, async (req, res) => {
     try {
         const existing = await prisma.quest.findFirst({
             where: { id: questId, userId },
+            select: {
+                id: true,
+                completed: true,
+                rewardBody: true,
+                rewardMind: true,
+                rewardSoul: true,
+            },
         });
         if (!existing) {
             return res.status(404).json({ error: "Quest not found" });
         }
-        const updated = await prisma.quest.update({
-            where: { id: questId },
-            data: { completed },
+        const updated = await prisma.$transaction(async (tx) => {
+            const quest = await tx.quest.update({
+                where: { id: questId },
+                data: { completed },
+            });
+
+            if (completed !== existing.completed) {
+                const delta = completed ? 1 : -1;
+                const deltaBody = existing.rewardBody * delta;
+                const deltaMind = existing.rewardMind * delta;
+                const deltaSoul = existing.rewardSoul * delta;
+
+                if (deltaBody !== 0 || deltaMind !== 0 || deltaSoul !== 0) {
+                    const user = await tx.user.findUnique({
+                        where: { id: userId },
+                        select: { pointsBody: true, pointsMind: true, pointsSoul: true },
+                    });
+                    if (!user) {
+                        throw new Error("User not found");
+                    }
+
+                    const nextBody = user.pointsBody + deltaBody;
+                    const nextMind = user.pointsMind + deltaMind;
+                    const nextSoul = user.pointsSoul + deltaSoul;
+
+                    if (nextBody < 0 || nextMind < 0 || nextSoul < 0) {
+                        const error = new Error("Insufficient points to mark quest incomplete");
+                        (error as Error & { code?: string }).code = "POINTS_UNDERFLOW";
+                        throw error;
+                    }
+
+                    await tx.user.update({
+                        where: { id: userId },
+                        data: {
+                            pointsBody: nextBody,
+                            pointsMind: nextMind,
+                            pointsSoul: nextSoul,
+                        },
+                    });
+                }
+            }
+
+            return quest;
         });
         return res.json(updated);
     } catch (e) {
+        if ((e as Error & { code?: string }).code === "POINTS_UNDERFLOW") {
+            return res.status(400).json({ error: (e as Error).message });
+        }
         console.error(e);
         return res.status(500).json({ error: "Failed to update quest" });
     }

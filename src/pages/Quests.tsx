@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import QuestMenu from '../components/QuestMenu';
+import UserPointsSummary from '../components/UserPointsSummary';
 import type { Quest } from '../api/quests';
 import {
     create as createQuest,
@@ -17,8 +18,12 @@ const Quests = () => {
     const [title, setTitle] = useState('');
     const [details, setDetails] = useState('');
     const [group, setGroup] = useState('General');
+    const [rewardBody, setRewardBody] = useState('0');
+    const [rewardMind, setRewardMind] = useState('0');
+    const [rewardSoul, setRewardSoul] = useState('0');
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
+    const [pointsRefreshKey, setPointsRefreshKey] = useState(0);
 
     useEffect(() => {
         fetchQuests()
@@ -31,6 +36,9 @@ const Quests = () => {
         setTitle('');
         setDetails('');
         setGroup('General');
+        setRewardBody('0');
+        setRewardMind('0');
+        setRewardSoul('0');
         setFormError(null);
         setSubmitting(false);
     };
@@ -51,12 +59,39 @@ const Quests = () => {
             setFormError('Quest title is required');
             return;
         }
+
+        const parseReward = (value: string, label: string) => {
+            const trimmed = value.trim();
+            if (!trimmed) return 0;
+            const numeric = Number(trimmed);
+            if (!Number.isFinite(numeric) || !Number.isInteger(numeric) || numeric < 0) {
+                throw new Error(`${label} must be a non-negative integer`);
+            }
+            return numeric;
+        };
+
+        let parsedRewardBody = 0;
+        let parsedRewardMind = 0;
+        let parsedRewardSoul = 0;
+
+        try {
+            parsedRewardBody = parseReward(rewardBody, 'Body reward');
+            parsedRewardMind = parseReward(rewardMind, 'Mind reward');
+            parsedRewardSoul = parseReward(rewardSoul, 'Soul reward');
+        } catch (parseError) {
+            setFormError((parseError as Error).message);
+            return;
+        }
+
         setSubmitting(true);
         try {
             const quest = await createQuest({
                 title: title.trim(),
                 details: details.trim() ? details.trim() : undefined,
                 group: group.trim() ? group.trim() : undefined,
+                rewardBody: parsedRewardBody,
+                rewardMind: parsedRewardMind,
+                rewardSoul: parsedRewardSoul,
             });
             setQuests((prev) => [quest, ...prev]);
             closeDialog();
@@ -84,6 +119,9 @@ const Quests = () => {
             setQuests((prev) =>
                 prev.map((quest) => (quest.id === updated.id ? updated : quest))
             );
+            if (updated.rewardBody > 0 || updated.rewardMind > 0 || updated.rewardSoul > 0) {
+                setPointsRefreshKey((prev) => prev + 1);
+            }
         } catch (err) {
             alert((err as Error).message);
         }
@@ -95,7 +133,13 @@ const Quests = () => {
     return (
         <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h1>Quests</h1>
+                <div>
+                    <h1 style={{ marginBottom: '0.25rem' }}>Quests</h1>
+                    <UserPointsSummary
+                        refreshKey={pointsRefreshKey}
+                        style={{ margin: 0, fontSize: '0.9rem', color: '#ccc' }}
+                    />
+                </div>
                 <button type="button" onClick={openDialog}>Add Quest</button>
             </div>
             <QuestMenu quests={quests} onDelete={handleDelete} onToggleComplete={handleToggleComplete} />
@@ -149,6 +193,48 @@ const Quests = () => {
                                 placeholder="General"
                             />
                         </label>
+                        <fieldset style={{ border: '1px solid #556', padding: '0.75rem', marginBottom: '1rem' }}>
+                            <legend>Point rewards</legend>
+                            <p style={{ marginTop: 0, fontSize: '0.85rem', color: '#ccd' }}>
+                                Assign non-negative whole numbers for each category.
+                            </p>
+                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                                Body
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={rewardBody}
+                                    onChange={(e) => setRewardBody(e.target.value)}
+                                    style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+                                    disabled={submitting}
+                                />
+                            </label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                                Mind
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={rewardMind}
+                                    onChange={(e) => setRewardMind(e.target.value)}
+                                    style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+                                    disabled={submitting}
+                                />
+                            </label>
+                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+                                Soul
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={rewardSoul}
+                                    onChange={(e) => setRewardSoul(e.target.value)}
+                                    style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
+                                    disabled={submitting}
+                                />
+                            </label>
+                        </fieldset>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                             <button type="button" onClick={closeDialog} disabled={submitting}>Cancel</button>
                             <button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
