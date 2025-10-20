@@ -1,3 +1,5 @@
+import type { Item } from './items';
+
 export type Quest = {
     id: number;
     title: string;
@@ -8,6 +10,7 @@ export type Quest = {
     rewardBody: number;
     rewardMind: number;
     rewardSoul: number;
+    rewardItems: Item[];
 };
 
 export type CreateQuestInput = {
@@ -17,6 +20,7 @@ export type CreateQuestInput = {
     rewardBody?: number;
     rewardMind?: number;
     rewardSoul?: number;
+    rewardItemIds?: number[];
 };
 
 const BASE = 'http://localhost:3000';

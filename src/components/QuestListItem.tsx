@@ -16,6 +16,14 @@ const QuestListItem = ({ quest }: QuestListItemProps) => (
         ) : (
             <p>No point rewards assigned.</p>
         )}
+        {quest.rewardItems && quest.rewardItems.length > 0 ? (
+            <p>
+                Reward items:{' '}
+                {quest.rewardItems.map((item) => item.title).join(', ')}
+            </p>
+        ) : (
+            <p>No item rewards assigned.</p>
+        )}
         <p>
             Complete:{' '}
             <span>

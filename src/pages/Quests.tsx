@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
+import InventoryListItem from '../components/InventoryListItem';
 import QuestMenu from '../components/QuestMenu';
 import UserPointsSummary from '../components/UserPointsSummary';
 import type { Quest } from '../api/quests';
@@ -9,6 +10,8 @@ import {
     remove as deleteQuest,
     updateCompletion as toggleQuestCompletion,
 } from '../api/quests';
+import type { Item } from '../api/items';
+import { list as fetchItems } from '../api/items';
 
 const Quests = () => {
     const [quests, setQuests] = useState<Quest[]>([]);
@@ -21,9 +24,39 @@ const Quests = () => {
     const [rewardBody, setRewardBody] = useState('0');
     const [rewardMind, setRewardMind] = useState('0');
     const [rewardSoul, setRewardSoul] = useState('0');
+    const [items, setItems] = useState<Item[]>([]);
+    const [itemsLoading, setItemsLoading] = useState(true);
+    const [itemsError, setItemsError] = useState<string | null>(null);
+    const [selectedRewardItemIds, setSelectedRewardItemIds] = useState<number[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [pointsRefreshKey, setPointsRefreshKey] = useState(0);
+    const loadItems = useCallback(async () => {
+        setItemsLoading(true);
+        setItemsError(null);
+        try {
+            const fetchedItems = await fetchItems();
+            setItems(fetchedItems);
+            setSelectedRewardItemIds((prev) => {
+                if (prev.length === 0) return prev;
+                const allowed = new Set(fetchedItems.map((item) => item.id));
+                return prev.filter((id) => allowed.has(id));
+            });
+            return fetchedItems;
+        } catch (err) {
+            setItems([]);
+            setItemsError((err as Error).message);
+            throw err;
+        } finally {
+            setItemsLoading(false);
+        }
+    }, []);
+
+    const toggleRewardItemSelection = useCallback((itemId: number) => {
+        setSelectedRewardItemIds((prev) =>
+            prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId]
+        );
+    }, []);
 
     useEffect(() => {
         fetchQuests()
@@ -32,6 +65,10 @@ const Quests = () => {
             .finally(() => setLoading(false));
     }, []);
 
+    useEffect(() => {
+        loadItems().catch(() => undefined);
+    }, [loadItems]);
+
     const resetDialog = () => {
         setTitle('');
         setDetails('');
@@ -39,6 +76,7 @@ const Quests = () => {
         setRewardBody('0');
         setRewardMind('0');
         setRewardSoul('0');
+        setSelectedRewardItemIds([]);
         setFormError(null);
         setSubmitting(false);
     };
@@ -51,6 +89,7 @@ const Quests = () => {
     const openDialog = () => {
         setFormError(null);
         setDialogOpen(true);
+        loadItems().catch(() => undefined);
     };
 
     const handleSubmit = async (event: FormEvent) => {
@@ -89,6 +128,7 @@ const Quests = () => {
                 title: title.trim(),
                 details: details.trim() ? details.trim() : undefined,
                 group: group.trim() ? group.trim() : undefined,
+                ...(selectedRewardItemIds.length > 0 ? { rewardItemIds: selectedRewardItemIds } : {}),
                 rewardBody: parsedRewardBody,
                 rewardMind: parsedRewardMind,
                 rewardSoul: parsedRewardSoul,
@@ -121,6 +161,9 @@ const Quests = () => {
             );
             if (updated.rewardBody > 0 || updated.rewardMind > 0 || updated.rewardSoul > 0) {
                 setPointsRefreshKey((prev) => prev + 1);
+            }
+            if (updated.rewardItems && updated.rewardItems.length > 0) {
+                loadItems().catch(() => undefined);
             }
         } catch (err) {
             alert((err as Error).message);
@@ -160,7 +203,14 @@ const Quests = () => {
                 >
                     <form
                         onSubmit={handleSubmit}
-                        style={{ background: '#223', padding: '1.5rem', borderRadius: '0.5rem', minWidth: '280px' }}
+                        style={{
+                            background: '#223',
+                            padding: '1.5rem',
+                            borderRadius: '0.5rem',
+                            minWidth: '280px',
+                            maxHeight: '85vh',
+                            overflowY: 'auto',
+                        }}
                     >
                         <h2 id="add-quest-heading" style={{ marginTop: 0 }}>Add Quest</h2>
                         {formError ? <p style={{ color: 'red' }}>{formError}</p> : null}
@@ -234,6 +284,53 @@ const Quests = () => {
                                     disabled={submitting}
                                 />
                             </label>
+                        </fieldset>
+                        <fieldset style={{ border: '1px solid #556', padding: '0.75rem', marginBottom: '1rem' }}>
+                            <legend>Item rewards</legend>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#ccd' }}>
+                                    Select one or more items to grant when the quest is completed.
+                                </p>
+                                {selectedRewardItemIds.length > 0 ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedRewardItemIds([])}
+                                        disabled={submitting}
+                                    >
+                                        Clear selection
+                                    </button>
+                                ) : null}
+                            </div>
+                            {itemsLoading ? (
+                                <p style={{ margin: 0 }}>Loading items…</p>
+                            ) : itemsError ? (
+                                <p style={{ margin: 0, color: 'salmon' }}>Failed to load items: {itemsError}</p>
+                            ) : items.length === 0 ? (
+                                <p style={{ margin: 0 }}>No items available yet.</p>
+                            ) : (
+                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                    {items.map((item) => {
+                                        const checked = selectedRewardItemIds.includes(item.id);
+                                        return (
+                                            <li key={item.id}>
+                                                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', cursor: 'pointer' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        name="rewardItem"
+                                                        value={item.id}
+                                                        checked={checked}
+                                                        onChange={() => toggleRewardItemSelection(item.id)}
+                                                        disabled={submitting}
+                                                    />
+                                                    <div style={{ flex: 1 }}>
+                                                        <InventoryListItem item={item} />
+                                                    </div>
+                                                </label>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
                         </fieldset>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                             <button type="button" onClick={closeDialog} disabled={submitting}>Cancel</button>

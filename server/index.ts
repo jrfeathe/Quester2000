@@ -114,6 +114,7 @@ app.get("/api/quests", requireAuth, async (req, res) => {
         const quests = await prisma.quest.findMany({
             where: { userId },
             orderBy: { createdAt: "desc" },
+            include: { rewardItems: true },
         });
         return res.json(quests);
     } catch (e) {
@@ -131,7 +132,17 @@ app.post("/api/quests", requireAuth, async (req, res) => {
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    const { title, details, group, rewardBody, rewardMind, rewardSoul } = req.body ?? {};
+    const {
+        title,
+        details,
+        group,
+        rewardBody,
+        rewardMind,
+        rewardSoul,
+        rewardItemId,
+        rewardItemIds,
+    } =
+        req.body ?? {};
     const trimmedTitle = typeof title === "string" ? title.trim() : "";
     if (!trimmedTitle) {
         return res.status(400).json({ error: "Title is required" });
@@ -161,17 +172,80 @@ app.post("/api/quests", requireAuth, async (req, res) => {
         return res.status(400).json({ error: (parseError as Error).message });
     }
 
+    const rawRewardItemIds =
+        rewardItemIds !== undefined && rewardItemIds !== null
+            ? rewardItemIds
+            : rewardItemId !== undefined && rewardItemId !== null
+              ? [rewardItemId]
+              : undefined;
+
+    let rewardItemConnectIds: number[] = [];
+    if (rawRewardItemIds !== undefined) {
+        if (!Array.isArray(rawRewardItemIds)) {
+            return res
+                .status(400)
+                .json({ error: "rewardItemIds must be an array of positive integers" });
+        }
+        const parsedIds = rawRewardItemIds.map((id) =>
+            typeof id === "number" ? id : Number(id)
+        );
+        if (parsedIds.some((id) => !Number.isInteger(id) || id <= 0)) {
+            return res
+                .status(400)
+                .json({ error: "rewardItemIds must be an array of positive integers" });
+        }
+        const uniqueIds = Array.from(new Set(parsedIds));
+        if (uniqueIds.length === 0) {
+            rewardItemConnectIds = [];
+        } else {
+            const rewardItems = await prisma.item.findMany({
+                where: { id: { in: uniqueIds }, userId },
+                select: { id: true },
+            });
+            if (rewardItems.length !== uniqueIds.length) {
+                return res.status(404).json({ error: "One or more reward items not found" });
+            }
+            rewardItemConnectIds = rewardItems.map((item) => item.id);
+        }
+    }
+
     try {
-        const quest = await prisma.quest.create({
-            data: {
-                title: trimmedTitle,
-                details: trimmedDetails,
-                group: trimmedGroup,
-                rewardBody: parsedRewardBody,
-                rewardMind: parsedRewardMind,
-                rewardSoul: parsedRewardSoul,
-                userId,
-            },
+        const quest = await prisma.$transaction(async (tx) => {
+            const created = await tx.quest.create({
+                data: {
+                    title: trimmedTitle,
+                    details: trimmedDetails,
+                    group: trimmedGroup,
+                    rewardBody: parsedRewardBody,
+                    rewardMind: parsedRewardMind,
+                    rewardSoul: parsedRewardSoul,
+                    userId,
+                },
+                select: { id: true },
+            });
+
+            if (rewardItemConnectIds.length > 0) {
+                await tx.quest.update({
+                    where: { id: created.id },
+                    data: {
+                        rewardItems: {
+                            set: [],
+                            connect: rewardItemConnectIds.map((id) => ({ id })),
+                        },
+                    },
+                });
+            }
+
+            const withRelations = await tx.quest.findUnique({
+                where: { id: created.id },
+                include: { rewardItems: true },
+            });
+
+            if (!withRelations) {
+                throw new Error("Quest not found after creation");
+            }
+
+            return withRelations;
         });
         return res.status(201).json(quest);
     } catch (e) {
@@ -236,6 +310,7 @@ app.patch("/api/quests/:id", requireAuth, async (req, res) => {
                 rewardBody: true,
                 rewardMind: true,
                 rewardSoul: true,
+                rewardItems: { select: { id: true } },
             },
         });
         if (!existing) {
@@ -245,6 +320,7 @@ app.patch("/api/quests/:id", requireAuth, async (req, res) => {
             const quest = await tx.quest.update({
                 where: { id: questId },
                 data: { completed },
+                include: { rewardItems: true },
             });
 
             if (completed !== existing.completed) {
@@ -281,13 +357,46 @@ app.patch("/api/quests/:id", requireAuth, async (req, res) => {
                         },
                     });
                 }
+
+                if (existing.rewardItems.length > 0) {
+                    for (const rewardItem of existing.rewardItems) {
+                        const inventoryItem = await tx.item.findFirst({
+                            where: { id: rewardItem.id, userId },
+                            select: { id: true, quantity: true },
+                        });
+                        if (!inventoryItem) {
+                            const error = new Error("Reward item no longer exists");
+                            (error as Error & { code?: string }).code = "REWARD_ITEM_MISSING";
+                            throw error;
+                        }
+                        if (delta < 0 && inventoryItem.quantity <= 0) {
+                            const error = new Error(
+                                "Reward item has already been consumed; cannot undo completion"
+                            );
+                            (error as Error & { code?: string }).code = "REWARD_ITEM_UNDERFLOW";
+                            throw error;
+                        }
+
+                        await tx.item.update({
+                            where: { id: inventoryItem.id },
+                            data:
+                                delta > 0
+                                    ? { quantity: { increment: 1 } }
+                                    : { quantity: { decrement: 1 } },
+                        });
+                    }
+                }
             }
 
             return quest;
         });
         return res.json(updated);
     } catch (e) {
-        if ((e as Error & { code?: string }).code === "POINTS_UNDERFLOW") {
+        const code = (e as Error & { code?: string }).code;
+        if (code === "POINTS_UNDERFLOW" || code === "REWARD_ITEM_UNDERFLOW") {
+            return res.status(400).json({ error: (e as Error).message });
+        }
+        if (code === "REWARD_ITEM_MISSING") {
             return res.status(400).json({ error: (e as Error).message });
         }
         console.error(e);
