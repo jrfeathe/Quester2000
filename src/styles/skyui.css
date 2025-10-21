@@ -1,0 +1,293 @@
+/* -------- SKYUI: Skyrim-inspired quest UI -------- */
+
+/* ========== Tokens */
+:root {
+    --sky-bg: #0a0d12;
+    --sky-bg-alt: #0e131a;
+    --sky-panel: rgba(12, 16, 22, 0.92);
+    --sky-border: #4c5864;
+    --sky-border-soft: #2f3943;
+    --sky-glow: rgba(0, 0, 0, 0.55);
+    --sky-text: #d7dbe0;
+    --sky-dim: #a8b0b9;
+    --sky-mute: #8c96a1;
+    --sky-accent: #d3c6a0;     /* warm “gold” for highlights */
+    --sky-accent-dim: #b6ab8a;
+    --sky-link: #a8c3e6;       /* icy blue link */
+    --sky-focus: #b8c2cc;
+    --sky-radius: 8px;
+    --sky-gap: 14px;
+}
+
+/* Optional font – similar vibe to Skyrim headings.
+   You can load Cinzel from Google Fonts in index.html:
+   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&display=swap" rel="stylesheet">
+*/
+.skyui, .skyui * { box-sizing: border-box; }
+.skyui {
+    --heading-font: "Cinzel", "Trajan Pro", Georgia, serif;
+    --ui-font: "Inter", system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+
+    color: var(--sky-text);
+    font-family: var(--ui-font);
+    background:
+            radial-gradient(1200px 700px at 20% -10%, #18222f 0%, transparent 60%),
+            radial-gradient(1200px 700px at 110% 120%, #151d28 0%, transparent 60%),
+            var(--sky-bg);
+    min-height: 100%;
+    padding: 18px;
+}
+
+/* ========== Top nav (“QUESTS / GENERAL STATS / SYSTEM”) */
+.skyui-topnav {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    margin-bottom: 18px;
+    user-select: none;
+}
+.skyui-topnav .tab {
+    position: relative;
+    letter-spacing: .08em;
+    font-family: var(--heading-font);
+    font-size: 15px;
+    color: var(--sky-mute);
+    padding: 8px 12px 6px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color .15s ease;
+}
+.skyui-topnav .tab:hover { color: var(--sky-focus); }
+.skyui-topnav .tab.is-active {
+    color: var(--sky-accent);
+}
+.skyui-topnav .tab.is-active::after {
+    /* tiny chevrons ◀ _  _  _ ▶*/
+    position: absolute;
+    left: -22px;
+    right: -22px;
+    top: 50%;
+    transform: translateY(-50%);
+    letter-spacing: 6px;
+    font-size: 12px;
+    color: var(--sky-accent-dim);
+    pointer-events: none;
+}
+
+/* ========== 2-pane layout */
+.skyui-columns {
+    display: grid;
+    grid-template-columns: minmax(220px, 30%) 1fr;
+    gap: 22px;
+    align-items: start;
+}
+@media (max-width: 920px) {
+    .skyui-columns { grid-template-columns: 1fr; }
+}
+
+/* ========== Pane frame with bracketed corners */
+.skyui-pane {
+    position: relative;
+    background: linear-gradient(180deg, var(--sky-panel), var(--sky-bg-alt));
+    border: 1px solid var(--sky-border-soft);
+    padding: 18px 18px 16px;
+    box-shadow:
+            inset 0 0 0 1px rgba(255,255,255,.04),
+            0 20px 40px var(--sky-glow);
+    border-radius: var(--sky-radius);
+    overflow: hidden;
+}
+
+/* corner brackets */
+.skyui-pane::before {
+    content: "";
+    position: absolute; inset: 8px;
+    pointer-events: none;
+    background:
+            linear-gradient(var(--sky-border), var(--sky-border)) left top / 18px 1px no-repeat,
+            linear-gradient(var(--sky-border), var(--sky-border)) left top / 1px 18px no-repeat,
+            linear-gradient(var(--sky-border), var(--sky-border)) right top / 18px 1px no-repeat,
+            linear-gradient(var(--sky-border), var(--sky-border)) right top / 1px 18px no-repeat,
+            linear-gradient(var(--sky-border), var(--sky-border)) left bottom / 18px 1px no-repeat,
+            linear-gradient(var(--sky-border), var(--sky-border)) left bottom / 1px 18px no-repeat,
+            linear-gradient(var(--sky-border), var(--sky-border)) right bottom / 18px 1px no-repeat,
+            linear-gradient(var(--sky-border), var(--sky-border)) right bottom / 1px 18px no-repeat;
+    border-radius: calc(var(--sky-radius) - 6px);
+}
+
+/* headings */
+.skyui-title {
+    font-family: var(--heading-font);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    font-weight: 600;
+    margin: 2px 0 10px;
+    color: var(--sky-accent);
+}
+.skyui-subtitle {
+    font-family: var(--heading-font);
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    font-size: 12px;
+    color: var(--sky-dim);
+    margin: 16px 0 8px;
+}
+
+/* subtle divider with center ornament */
+.skyui-rule {
+    position: relative;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #5c6874 30%, #5c6874 70%, transparent);
+    margin: 10px 0 14px;
+}
+.skyui-rule::after {
+    content: "◇";
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -55%);
+    color: var(--sky-accent-dim);
+    font-size: 14px;
+    background: linear-gradient(180deg, transparent, transparent);
+    padding: 0 6px;
+}
+
+/* ========== Left list (quests/categories) */
+.skyui-list { margin: 0; padding: 0; list-style: none; }
+.skyui-list .group {
+    margin: 6px 0 10px;
+    color: var(--sky-dim);
+    font-family: var(--heading-font);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-size: 12px;
+}
+.skyui-quests { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+
+.skyui-quest {
+    position: relative;
+    padding: 10px 12px 9px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    line-height: 1.1;
+    transition: background .1s ease, border-color .1s ease, transform .06s ease;
+}
+.skyui-quest:hover {
+    background: rgba(255,255,255,.03);
+    border-color: var(--sky-border-soft);
+}
+.skyui-quest.is-active {
+    background: linear-gradient(180deg, rgba(211,198,160,.10), rgba(211,198,160,.06));
+    border-color: color-mix(in lab, var(--sky-accent) 60%, var(--sky-border));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 0 0 0 1px rgba(0,0,0,.35);
+}
+.skyui-quest.is-active::before {
+    /* left caret */
+    content: "";
+    position: absolute; left: 4px; top: 50%;
+    width: 10px; height: 10px;
+    transform: translateY(-50%) rotate(135deg);
+    border-left: 2px solid var(--sky-accent);
+    border-top: 2px solid var(--sky-accent);
+    opacity: .9;
+}
+.skyui-quest .title {
+    font-family: var(--heading-font);
+    color: var(--sky-text);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    font-size: 13px;
+}
+.skyui-quest .meta {
+    color: var(--sky-mute);
+    font-size: 11px;
+    margin-top: 3px;
+}
+
+/* ========== Right detail pane */
+.skyui-detail { }
+.skyui-detail .blurb {
+    color: var(--sky-dim);
+    margin: 2px 0 10px;
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+/* diamond bullet list for objectives */
+.diamond-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 8px; }
+.diamond-list li {
+    position: relative;
+    padding-left: 22px;
+}
+.diamond-list li::before {
+    content: "";
+    position: absolute; left: 0; top: 7px;
+    width: 10px; height: 10px;
+    transform: rotate(45deg);
+    border: 1px solid #93a0ad;
+    background: linear-gradient(180deg, #cfd7df, #b8c2cc);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.35) inset;
+}
+.diamond-list li.completed {
+    color: #a3b1be;
+}
+.diamond-list li.completed::before {
+    background: linear-gradient(180deg, #97a4b0, #7c8893);
+}
+
+/* ========== Buttons */
+.skyui-buttons { display: flex; gap: 10px; }
+.skyui-btn {
+    appearance: none; border: 1px solid var(--sky-border-soft);
+    background: linear-gradient(180deg, #202833, #131a22);
+    color: var(--sky-text); padding: 8px 12px; border-radius: 6px;
+    letter-spacing: .03em; cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    transition: filter .12s ease, transform .06s ease, border-color .12s ease;
+}
+.skyui-btn:hover { filter: brightness(1.06); border-color: var(--sky-border); }
+.skyui-btn:active { transform: translateY(1px); }
+.skyui-btn.primary { border-color: color-mix(in lab, var(--sky-accent) 50%, var(--sky-border)); }
+.skyui-btn.ghost   { background: transparent; }
+
+/* ========== Modal (Add Quest) */
+.skyui-modal {
+    position: fixed; inset: 0; z-index: 1000;
+    background: radial-gradient(600px 300px at 50% 40%, rgba(0,0,0,.35), transparent 70%), rgba(0, 0, 0, .55);
+    display: grid; place-items: center; padding: 16px;
+}
+
+.skyui-dialog {
+    width: min(720px, 92vw);
+    max-height: 85vh; overflow: auto;
+}
+.skyui-dialog .field { margin-bottom: 12px; }
+.skyui-dialog label { font-size: 12px; color: var(--sky-dim); display: block; margin-bottom: 6px; }
+.skyui-input, .skyui-textarea, .skyui-select {
+    width: 100%; padding: 8px 10px; border-radius: 6px;
+    border: 1px solid var(--sky-border-soft);
+    color: var(--sky-text); background: #121820;
+    outline: none;
+}
+.skyui-input:focus, .skyui-textarea:focus, .skyui-select:focus {
+    border-color: var(--sky-border);
+    box-shadow: 0 0 0 2px rgba(168,195,230,.15);
+}
+.skyui-textarea { resize: vertical; min-height: 90px; }
+
+.skyui-fieldset {
+    border: 1px solid var(--sky-border);
+    border-radius: 8px; padding: 12px; margin: 14px 0;
+}
+.skyui-legend {
+    font-family: var(--heading-font);
+    text-transform: uppercase; letter-spacing: .08em; font-size: 12px;
+    color: var(--sky-accent); padding: 0 6px;
+}
+
+.skyui-error { color: #ff9c9c; margin: 6px 0; }
+
+/* ========== Utilities */
+.skyui-flex { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.skyui-muted { color: var(--sky-dim); }
+.skyui-small { font-size: 12px; }
+

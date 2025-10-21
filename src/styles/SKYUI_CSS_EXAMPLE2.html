@@ -1,0 +1,60 @@
+<div className="skyui">
+  <nav className="skyui-topnav">
+    <div className="tab is-active">Quests</div>
+    <div className="tab">General Stats</div>
+    <div className="tab">System</div>
+  </nav>
+
+  <div className="skyui-columns">
+    <aside className="skyui-pane">
+      {/* If QuestMenu doesn't accept className, just wrap it like this */}
+      <QuestMenu /* ...props */ />
+    </aside>
+
+    <section className="skyui-pane">
+      {/* Put your currently selected quest’s details & objectives here */}
+      {/* Or render a “Select a quest” placeholder styled with .skyui-muted */}
+    </section>
+  </div>
+
+  {/* Dialog (replace inline styles with classes if you can) */}
+  {isDialogOpen && (
+    <div className="skyui-modal" role="dialog" aria-modal="true" aria-labelledby="add-quest-heading">
+      <form className="skyui-pane skyui-dialog" onSubmit={handleSubmit}>
+        <h2 id="add-quest-heading" className="skyui-title">Add Quest</h2>
+        {formError && <p className="skyui-error">{formError}</p>}
+
+        <div className="field">
+          <label>Title</label>
+          <input className="skyui-input" value={title} onChange={e => setTitle(e.target.value)} disabled={submitting} />
+        </div>
+
+        <div className="field">
+          <label>Details (optional)</label>
+          <textarea className="skyui-textarea" value={details} onChange={e => setDetails(e.target.value)} disabled={submitting} rows={4} />
+        </div>
+
+        <div className="field">
+          <label>Group (optional)</label>
+          <input className="skyui-input" value={group} onChange={e => setGroup(e.target.value)} disabled={submitting} placeholder="General" />
+        </div>
+
+        <fieldset className="skyui-fieldset">
+          <legend className="skyui-legend">Point Rewards</legend>
+          <p className="skyui-muted skyui-small" style={{marginTop: 0}}>Assign non-negative whole numbers.</p>
+          <div className="field"><label>Body</label><input type="number" min="0" step="1" className="skyui-input" value={rewardBody} onChange={e => setRewardBody(e.target.value)} disabled={submitting}/></div>
+          <div className="field"><label>Mind</label><input type="number" min="0" step="1" className="skyui-input" value={rewardMind} onChange={e => setRewardMind(e.target.value)} disabled={submitting}/></div>
+          <div className="field"><label>Soul</label><input type="number" min="0" step="1" className="skyui-input" value={rewardSoul} onChange={e => setRewardSoul(e.target.value)} disabled={submitting}/></div>
+        </fieldset>
+
+        {/* Your items list can stay as-is—just wrap/label with classes if desired */}
+
+        <div className="skyui-buttons" style={{ justifyContent: 'flex-end' }}>
+          <button type="button" className="skyui-btn" onClick={closeDialog} disabled={submitting}>Cancel</button>
+          <button type="submit" className="skyui-btn primary" disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
+        </div>
+      </form>
+    </div>
+  )}
+</div>
+

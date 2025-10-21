@@ -1,36 +1,43 @@
+import type { KeyboardEvent } from 'react';
 import type { Quest } from '../api/quests';
 
 type QuestListItemProps = {
     quest: Quest;
+    isActive: boolean;
+    onSelect: (questId: number) => void;
 };
 
-const QuestListItem = ({ quest }: QuestListItemProps) => (
-    <div className="quest-list-item">
-        <h2>{quest.title}</h2>
-        <p>Group: {quest.group}</p>
-        {quest.details ? <p>{quest.details}</p> : <p>No additional details provided.</p>}
-        {quest.rewardBody > 0 || quest.rewardMind > 0 || quest.rewardSoul > 0 ? (
-            <p>
-                Rewards: Body {quest.rewardBody} · Mind {quest.rewardMind} · Soul {quest.rewardSoul}
-            </p>
-        ) : (
-            <p>No point rewards assigned.</p>
-        )}
-        {quest.rewardItems && quest.rewardItems.length > 0 ? (
-            <p>
-                Reward items:{' '}
-                {quest.rewardItems.map((item) => item.title).join(', ')}
-            </p>
-        ) : (
-            <p>No item rewards assigned.</p>
-        )}
-        <p>
-            Complete:{' '}
-            <span>
-                {quest.completed ? '✅' : '❌'}
-            </span>
-        </p>
-    </div>
-);
+const QuestListItem = ({ quest, isActive, onSelect }: QuestListItemProps) => {
+    const questClasses = ['skyui-quest'];
+    if (isActive) questClasses.push('is-active');
+
+    const handleClick = () => {
+        onSelect(quest.id);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent<HTMLLIElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onSelect(quest.id);
+        }
+    };
+
+    return (
+        <li
+            className={questClasses.join(' ')}
+            onClick={handleClick}
+            onKeyDown={handleKeyDown}
+            tabIndex={0}
+            role="button"
+            aria-pressed={isActive}
+        >
+            <div className="title">{quest.title}</div>
+            <div className="meta">
+                {(quest.group && quest.group.trim()) || 'General'}
+                {quest.completed ? ' • Completed' : ''}
+            </div>
+        </li>
+    );
+};
 
 export default QuestListItem;

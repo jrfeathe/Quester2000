@@ -1,5 +1,6 @@
 import React from 'react'
 import './App.css'
+import './styles/skyui.css';
 import { AuthProvider } from "./auth/AuthProvider";
 import { useAuth } from "./auth/useAuth";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";

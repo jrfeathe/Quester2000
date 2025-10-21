@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { FormEvent } from 'react';
-import InventoryListItem from '../components/InventoryListItem';
+import QuestDialog from '../components/QuestDialog';
 import QuestMenu from '../components/QuestMenu';
 import UserPointsSummary from '../components/UserPointsSummary';
 import type { Quest } from '../api/quests';
@@ -31,6 +31,7 @@ const Quests = () => {
     const [formError, setFormError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
     const [pointsRefreshKey, setPointsRefreshKey] = useState(0);
+    const [selectedQuestId, setSelectedQuestId] = useState<number | null>(null);
     const loadItems = useCallback(async () => {
         setItemsLoading(true);
         setItemsError(null);
@@ -64,6 +65,14 @@ const Quests = () => {
             .catch((err: Error) => setError(err.message))
             .finally(() => setLoading(false));
     }, []);
+
+    useEffect(() => {
+        setSelectedQuestId((prev) => {
+            if (quests.length === 0) return null;
+            if (prev && quests.some((quest) => quest.id === prev)) return prev;
+            return quests[0].id;
+        });
+    }, [quests]);
 
     useEffect(() => {
         loadItems().catch(() => undefined);
@@ -134,6 +143,7 @@ const Quests = () => {
                 rewardSoul: parsedRewardSoul,
             });
             setQuests((prev) => [quest, ...prev]);
+            setSelectedQuestId(quest.id);
             closeDialog();
         } catch (err) {
             setFormError((err as Error).message);
@@ -147,7 +157,14 @@ const Quests = () => {
 
         try {
             await deleteQuest(questId);
-            setQuests((prev) => prev.filter((quest) => quest.id !== questId));
+            setQuests((prev) => {
+                const next = prev.filter((quest) => quest.id !== questId);
+                setSelectedQuestId((current) => {
+                    if (current !== questId) return current;
+                    return next.length > 0 ? next[0].id : null;
+                });
+                return next;
+            });
         } catch (err) {
             alert((err as Error).message);
         }
@@ -170,176 +187,147 @@ const Quests = () => {
         }
     };
 
+    const selectedQuest = useMemo(
+        () => quests.find((quest) => quest.id === selectedQuestId) ?? null,
+        [quests, selectedQuestId]
+    );
+
     if (loading) return <div>Loading quests…</div>;
     if (error) return <div>Failed to load quests: {error}</div>;
 
     return (
-        <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                    <h1 style={{ marginBottom: '0.25rem' }}>Quests</h1>
-                    <UserPointsSummary
-                        refreshKey={pointsRefreshKey}
-                        style={{ margin: 0, fontSize: '0.9rem', color: '#ccc' }}
-                    />
-                </div>
-                <button type="button" onClick={openDialog}>Add Quest</button>
-            </div>
-            <QuestMenu quests={quests} onDelete={handleDelete} onToggleComplete={handleToggleComplete} />
-            {isDialogOpen && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="add-quest-heading"
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '1rem',
-                    }}
-                >
-                    <form
-                        onSubmit={handleSubmit}
-                        style={{
-                            background: '#223',
-                            padding: '1.5rem',
-                            borderRadius: '0.5rem',
-                            minWidth: '280px',
-                            maxHeight: '85vh',
-                            overflowY: 'auto',
-                        }}
-                    >
-                        <h2 id="add-quest-heading" style={{ marginTop: 0 }}>Add Quest</h2>
-                        {formError ? <p style={{ color: 'red' }}>{formError}</p> : null}
-                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Title
-                            <input
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                disabled={submitting}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Details (optional)
-                            <textarea
-                                value={details}
-                                onChange={(e) => setDetails(e.target.value)}
-                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                disabled={submitting}
-                                rows={4}
-                            />
-                        </label>
-                        <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                            Group (optional)
-                            <input
-                                value={group}
-                                onChange={(e) => setGroup(e.target.value)}
-                                style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                disabled={submitting}
-                                placeholder="General"
-                            />
-                        </label>
-                        <fieldset style={{ border: '1px solid #556', padding: '0.75rem', marginBottom: '1rem' }}>
-                            <legend>Point rewards</legend>
-                            <p style={{ marginTop: 0, fontSize: '0.85rem', color: '#ccd' }}>
-                                Assign non-negative whole numbers for each category.
+        <>
+            <div className="skyui-columns">
+                <QuestMenu
+                    quests={quests}
+                    selectedQuestId={selectedQuestId}
+                    onSelectQuest={(questId) => setSelectedQuestId(questId)}
+                    onOpenDialog={openDialog}
+                />
+
+                <section className="skyui-pane skyui-detail">
+                    <div className="skyui-flex" style={{ alignItems: 'flex-start' }}>
+                        <div>
+                            <h2 className="skyui-title">
+                                {selectedQuest ? selectedQuest.title : 'Select a quest'}
+                            </h2>
+                            <p className="skyui-muted skyui-small">
+                                {selectedQuest
+                                    ? `${(selectedQuest.group && selectedQuest.group.trim()) || 'General'} • ${
+                                          selectedQuest.completed ? 'Completed' : 'In Progress'
+                                      }`
+                                    : 'Choose a quest from the list to see its details.'}
                             </p>
-                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                Body
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={rewardBody}
-                                    onChange={(e) => setRewardBody(e.target.value)}
-                                    style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                    disabled={submitting}
-                                />
-                            </label>
-                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                Mind
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={rewardMind}
-                                    onChange={(e) => setRewardMind(e.target.value)}
-                                    style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                    disabled={submitting}
-                                />
-                            </label>
-                            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
-                                Soul
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={rewardSoul}
-                                    onChange={(e) => setRewardSoul(e.target.value)}
-                                    style={{ display: 'block', width: '100%', marginTop: '0.25rem' }}
-                                    disabled={submitting}
-                                />
-                            </label>
-                        </fieldset>
-                        <fieldset style={{ border: '1px solid #556', padding: '0.75rem', marginBottom: '1rem' }}>
-                            <legend>Item rewards</legend>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
-                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#ccd' }}>
-                                    Select one or more items to grant when the quest is completed.
-                                </p>
-                                {selectedRewardItemIds.length > 0 ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setSelectedRewardItemIds([])}
-                                        disabled={submitting}
-                                    >
-                                        Clear selection
-                                    </button>
-                                ) : null}
-                            </div>
-                            {itemsLoading ? (
-                                <p style={{ margin: 0 }}>Loading items…</p>
-                            ) : itemsError ? (
-                                <p style={{ margin: 0, color: 'salmon' }}>Failed to load items: {itemsError}</p>
-                            ) : items.length === 0 ? (
-                                <p style={{ margin: 0 }}>No items available yet.</p>
-                            ) : (
-                                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                    {items.map((item) => {
-                                        const checked = selectedRewardItemIds.includes(item.id);
-                                        return (
-                                            <li key={item.id}>
-                                                <label style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start', cursor: 'pointer' }}>
-                                                    <input
-                                                        type="checkbox"
-                                                        name="rewardItem"
-                                                        value={item.id}
-                                                        checked={checked}
-                                                        onChange={() => toggleRewardItemSelection(item.id)}
-                                                        disabled={submitting}
-                                                    />
-                                                    <div style={{ flex: 1 }}>
-                                                        <InventoryListItem item={item} />
-                                                    </div>
-                                                </label>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
-                        </fieldset>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                            <button type="button" onClick={closeDialog} disabled={submitting}>Cancel</button>
-                            <button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Save'}</button>
                         </div>
-                    </form>
-                </div>
-            )}
-        </div>
+                        <UserPointsSummary
+                            refreshKey={pointsRefreshKey}
+                            className="skyui-muted skyui-small"
+                            style={{ margin: 0, textAlign: 'right' }}
+                        />
+                    </div>
+                    <div className="skyui-rule" />
+
+                    {selectedQuest ? (
+                        <>
+                            {selectedQuest.details ? (
+                                <p className="blurb">{selectedQuest.details}</p>
+                            ) : (
+                                <p className="skyui-muted">
+                                    No additional details provided for this quest.
+                                </p>
+                            )}
+
+                            {(() => {
+                                if (
+                                    selectedQuest.rewardBody === 0 &&
+                                    selectedQuest.rewardMind === 0 &&
+                                    selectedQuest.rewardSoul === 0 &&
+                                    !(selectedQuest.rewardItems && selectedQuest.rewardItems.length > 0)
+                                ) {
+                                    return <></>;
+                                }
+                                else {
+                                    return <h3 className="skyui-subtitle">Rewards</h3>
+                                }
+                            })()}
+
+                            {(() => {
+                                const entries = [
+                                    selectedQuest.rewardBody > 0 ? `Body ${selectedQuest.rewardBody}` : null,
+                                    selectedQuest.rewardMind > 0 ? `Mind ${selectedQuest.rewardMind}` : null,
+                                    selectedQuest.rewardSoul > 0 ? `Soul ${selectedQuest.rewardSoul}` : null,
+                                ].filter(Boolean);
+                                if (entries.length === 0) {
+                                    return <></>;
+                                }
+                                return <ul className="diamond-list"><li>{entries.join(' · ')}</li></ul>;
+                            })()}
+
+                            {selectedQuest.rewardItems && selectedQuest.rewardItems.length > 0 ? (
+                                <ul className="diamond-list">
+                                    {selectedQuest.rewardItems.map((item) => (
+                                        <li key={item.id}>{item.title}</li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <></>
+                            )}
+
+                            <div
+                                className="skyui-buttons"
+                                style={{ justifyContent: 'flex-end', marginTop: '16px', flexWrap: 'wrap' }}
+                            >
+                                <button
+                                    type="button"
+                                    className="skyui-btn"
+                                    onClick={() =>
+                                        handleToggleComplete(selectedQuest.id, !selectedQuest.completed)
+                                    }
+                                >
+                                    {selectedQuest.completed ? 'Mark as incomplete' : 'Mark as complete'}
+                                </button>
+                                <button
+                                    type="button"
+                                    className="skyui-btn ghost"
+                                    onClick={() => handleDelete(selectedQuest.id)}
+                                >
+                                    Delete quest
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <p className="skyui-muted">
+                            There are no quests to display.
+                        </p>
+                    )}
+                </section>
+            </div>
+            <QuestDialog
+                isOpen={isDialogOpen}
+                formError={formError}
+                title={title}
+                details={details}
+                group={group}
+                rewardBody={rewardBody}
+                rewardMind={rewardMind}
+                rewardSoul={rewardSoul}
+                items={items}
+                itemsLoading={itemsLoading}
+                itemsError={itemsError}
+                selectedRewardItemIds={selectedRewardItemIds}
+                submitting={submitting}
+                onClose={closeDialog}
+                onSubmit={handleSubmit}
+                onTitleChange={setTitle}
+                onDetailsChange={setDetails}
+                onGroupChange={setGroup}
+                onRewardBodyChange={setRewardBody}
+                onRewardMindChange={setRewardMind}
+                onRewardSoulChange={setRewardSoul}
+                onToggleRewardItem={toggleRewardItemSelection}
+                onClearSelectedItems={() => setSelectedRewardItemIds([])}
+            />
+        </>
     );
 };
 

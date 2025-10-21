@@ -1,23 +1,25 @@
 import { NavLink, Outlet } from 'react-router-dom';
 
+const navItems = [
+    { to: '/', label: 'Home' },
+    { to: '/quests', label: 'Quests' },
+    { to: '/shop', label: 'Shop' },
+    { to: '/inventory', label: 'Inventory' },
+    { to: '/about', label: 'About' },
+] as const;
+
 const NavController = () => (
-    <div>
-        <nav style={{ display: 'flex', gap: '1rem', padding: '1rem 0' }}>
-            <NavLink to="/" end>
-                Home
-            </NavLink>
-            <NavLink to="/quests">
-                Quests
-            </NavLink>
-            <NavLink to="/shop">
-                Shop
-            </NavLink>
-            <NavLink to="/inventory">
-                Inventory
-            </NavLink>
-            <NavLink to="/about">
-                About
-            </NavLink>
+    <div className="skyui">
+        <nav className="skyui-topnav" aria-label="Main navigation">
+            {navItems.map(({ to, label }) => (
+                <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) => `tab${isActive ? ' is-active' : ''}`}
+                >
+                    {label}
+                </NavLink>
+            ))}
         </nav>
         <Outlet />
     </div>
